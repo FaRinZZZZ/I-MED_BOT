@@ -1,0 +1,96 @@
+#define USE_ARDUINO_INTERRUPTS true    // Set-up low-level interrupts for most acurate BPM math.
+#include <PulseSensorPlayground.h>     // Includes the PulseSensorPlayground Library.
+#include <ESP8266WiFi.h>//เป็นการเรียกใช้ Library โมดูล ESP8266
+#include <FirebaseESP8266.h>
+
+//  Variables
+const int PulseWire = A0;       // PulseSensor PURPLE WIRE connected to ANALOG PIN 0
+int Threshold = 550;           // Determine which Signal to "count as a beat" and which to ignore.
+                               // Use the "Gettting Started Project" to fine-tune Threshold Value beyond default setting.
+                               // Otherwise leave the default "550" value. 
+
+PulseSensorPlayground pulseSensor;  // Creates an instance of the PulseSensorPlayground object called "pulseSensor"
+
+const char* ssid = ""; //สร้างตัวแปรไว้เก็บชื่อ ssid ของ AP ของเรา
+const char* pass = ""; //สร้างตัวแปรไว้เก็บชื่อ password ของ AP ของเรา
+
+#define FIREBASE_HOST ""
+#define FIREBASE_KEY ""
+FirebaseData firebaseData;
+int LED = D0;
+int MA1 = D1;
+int MA2 = D2;
+
+int MB1 = D3;
+int MB2 = D4;
+void setup() {
+  Serial.begin(115200); 
+  Firebase.begin(FIREBASE_HOST, FIREBASE_KEY);// For Serial Monitor
+  pinMode(PulseWire,INPUT);
+  pinMode(LED, OUTPUT);
+  pinMode(MA1, OUTPUT);
+  pinMode(MA2, OUTPUT);
+  pinMode(MB1, OUTPUT);
+  pinMode(MB2, OUTPUT);
+  WiFi.begin(ssid, pass); //ทำการเชื่อมต่อไปยัง AP
+
+  while (WiFi.status() != WL_CONNECTED) { //รอจนกว่าจะเชื่อมต่อสำเร็จ
+    Serial.print("."); //แสดง ... ไปเรื่อยๆ จนกว่าจะเชื่อมต่อได้
+    delay(500);
+  } //ถ้าเชื่อมต่อสำเร็จก็จะหลุก loop while ไปค่ะ
+
+  Serial.println("");
+  Serial.println("Wi-Fi connected"); //แสดงว่าเชื่อมต่อ Wi-Fi ได้แล้ว
+  Serial.print("IP Address : ");
+  Serial.println(WiFi.localIP()); //แสดง IP ของบอร์ดที่ได้รับแจกจาก AP
+}
+
+void loop() {
+  delay(1000);
+  analogRead(PulseWire);
+  Serial.println(PulseWire);
+  Firebase.setInt(firebaseData, "Server/B", PulseWire);
+  bool light = Firebase.getString(firebaseData, "/Server/light");
+  bool drive = Firebase.getString(firebaseData, "/Server/drive");
+  if (light == 1) {
+    digitalWrite(LED, HIGH);
+    Serial.println("Relay ON");
+  }
+  else if (light == 0) {
+    digitalWrite(LED, LOW);
+    Serial.println("Relay OFF");
+
+  }
+  else {
+    Serial.print("Not found");
+  }
+    
+  if (drive == 1){
+  Serial.println("Move on");
+    //Motor A go forward
+  digitalWrite(MA1, HIGH);
+  digitalWrite(MA2, LOW);
+  
+  //Motor B go forward
+  digitalWrite(MB1, HIGH);
+  digitalWrite(MB2, LOW);
+  }
+  else if (drive==0){
+    Serial.println("Not Move on");
+    //Motor A go forward
+  digitalWrite(MA1, LOW);
+  digitalWrite(MA2, LOW);
+  
+  //Motor B go forward
+  digitalWrite(MB1, LOW);
+  digitalWrite(MB2, LOW);
+  }
+  else{
+    Serial.println("Not happen");
+  }
+  
+  
+  
+                      // considered best practice in a simple sketch.
+
+}
